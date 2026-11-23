@@ -1,680 +1,470 @@
-::: {align="center"}
 # PaperTrail
 
-### Public services, connected. Paperwork, simplified.
+**One application. Consent-led information exchange. Signed and verifiable documents.**
 
-```{=html}
-<p>
-```
-`<img src="https://readme-typing-svg.demolab.com?font=Inter&weight=600&size=20&duration=2800&pause=900&color=2563EB&center=true&vCenter=true&width=680&lines=Apply+once.+Let+offices+work+together.;Consent-first+data+exchange.;Digitally+signed.+Instantly+verifiable.;A+more+transparent+public-service+experience." alt="PaperTrail animated tagline" />`{=html}
-```{=html}
-</p>
-```
-```{=html}
-<p>
-```
-`<strong>`{=html}A federated digital public-services platform
-template`</strong>`{=html}`<br/>`{=html} Connecting citizens, public
-offices and document verifiers through consent-driven workflows.
-```{=html}
-</p>
-```
-```{=html}
-<p>
-```
-`<img alt="Project status" src="https://img.shields.io/badge/status-prototype%20foundation-informational?style=for-the-badge" />`{=html}
-`<img alt="Architecture" src="https://img.shields.io/badge/architecture-federated-2563EB?style=for-the-badge" />`{=html}
-`<img alt="License" src="https://img.shields.io/badge/license-to%20be%20defined-lightgrey?style=for-the-badge" />`{=html}
-```{=html}
-</p>
-```
-```{=html}
-<p>
-```
-`<a href="#-the-problem">`{=html}The problem`</a>`{=html} ·
-`<a href="#-how-papertrail-works">`{=html}How it works`</a>`{=html} ·
-`<a href="#-platform-modules">`{=html}Modules`</a>`{=html} ·
-`<a href="#-architecture">`{=html}Architecture`</a>`{=html} ·
-`<a href="#-getting-started">`{=html}Getting started`</a>`{=html}
-```{=html}
-</p>
-```
-:::
+[![Status](https://img.shields.io/badge/status-SRS%20template-blue)](docs/requirements/traceability.md)
+[![Architecture](https://img.shields.io/badge/architecture-federated%20microservices-2563EB)](docs/architecture/overview.md)
+[![Frontend](https://img.shields.io/badge/frontend-React-61DAFB)](https://react.dev/)
+[![Backend](https://img.shields.io/badge/backend-Node.js%20%2B%20Fastify-339933)](https://fastify.dev/)
+[![Deployment](https://img.shields.io/badge/deployment-Docker%20%7C%20Kubernetes-326CE5)](infra/kubernetes/)
 
-------------------------------------------------------------------------
+PaperTrail is a federated digital public-services platform. Citizens submit one application, participating offices process assigned steps, consent controls inter-office data exchange, and approved documents are digitally signed and independently verifiable.
 
-> **The idea:** A citizen should not have to carry the same documents
-> from office to office, repeatedly explain the same request, or remain
-> uncertain about where an application is stuck. PaperTrail gives the
-> process one digital entry point while each public office keeps control
-> of its own records.
+This repository is an implementation template derived from the PaperTrail Software Requirements Specification (SRS), not a production government system.
 
-## 🌍 The problem
+## Table of Contents
 
-Administrative procedures can involve several offices, repeated document
-submissions, physical visits, disconnected records and unclear
-processing times. Even when one office already holds information another
-office needs, citizens may still be asked to obtain and transport that
-information themselves.
+- [Vision](#vision)
+- [SRS scope](#srs-scope)
+- [Platform modules](#platform-modules)
+- [Reference journeys](#reference-journeys)
+- [System architecture](#system-architecture)
+- [Consent and exchange design](#consent-and-exchange-design)
+- [Birth certificate sequence](#birth-certificate-sequence)
+- [Business registration workflow](#business-registration-workflow)
+- [Document trust design](#document-trust-design)
+- [Deployment architecture](#deployment-architecture)
+- [Repository structure](#repository-structure)
+- [Technology decisions](#technology-decisions)
+- [Getting started](#getting-started)
+- [Security and privacy](#security-and-privacy)
+- [Implementation status](#implementation-status)
+- [Documentation](#documentation)
 
-PaperTrail explores a different model:
+## Vision
 
-**Apply once. Share information with permission. Coordinate the process.
-Verify the result.**
+PaperTrail removes the citizen as a manual courier between offices. It provides:
 
-The platform is designed to connect existing institutions---not replace
-their legal authority or take ownership of their master records.
+1. A single application and status timeline.
+2. A citizen-controlled consent screen for cross-office data requests.
+3. A configurable workflow for approvals, parallel checks, deadlines, and escalation.
+4. Independent office data ownership.
+5. Signed documents with QR-based public verification.
+6. Append-only audit history for access and decisions.
 
-## ✨ What PaperTrail is
+The platform coordinates public services. It does not replace the legal authority or become the central master database of participating offices.
 
-PaperTrail is a web-and-mobile public-services platform with a dedicated
-office console and a public document-verification interface.
+## SRS scope
 
-A citizen submits an application through one portal. PaperTrail
-coordinates the required steps across participating offices, requests
-information only under a valid consent or legal-basis authorization,
-tracks progress, and supports the issuance of digitally signed
-documents.
+The SRS defines:
 
-The result is a connected administrative journey with clearer status,
-accountable access to information and documents that can be
-independently verified.
+- Six functional modules.
+- Three user-facing channels: citizen web/mobile, office console, and public verifier.
+- Federated office systems connected through adapters.
+- PostgreSQL 15+ databases per service.
+- AMQP or Redis Streams event delivery.
+- REST and JSON interfaces over TLS.
+- OIDC identity, OTP, signed webhooks, S3-compatible object storage, and an external key vault/HSM.
+- Docker and Kubernetes portability.
+- AES-256 protection at rest, mutual TLS between offices, least-privilege access, MFA, and annual signing-key rotation.
+- A 10-year default audit and consent retention period.
 
-### Core principles
+The source document is available at [docs/PaperTrail — Software Requirements Specification.pdf](docs/PaperTrail%20%E2%80%94%20Software%20Requirements%20Specification.pdf).
 
-  -----------------------------------------------------------------------
-  Principle                           What it means
-  ----------------------------------- -----------------------------------
-  **Federated by design**             Each office remains the
-                                      authoritative owner of its records.
-                                      PaperTrail does not create a
-                                      central master database of office
-                                      records.
+## Platform modules
 
-  **Consent before exchange**         Inter-office data requests must
-                                      carry valid, purpose-bound
-                                      authorization or an applicable
-                                      legal-basis token.
+| Module | Responsibility | Primary implementation |
+|---|---|---|
+| M1 Citizen Portal and Document Wallet | Service catalogue, applications, drafts, status timeline, uploads, wallet, delegation | `apps/citizen-web`, `services/citizen-portal`, `apps/mobile` |
+| M2 Workflow Engine | State machines, tasks, parallel branches, timers, deadlines, escalation | `services/workflow` |
+| M3 Consent and Inter-Office Exchange | Consent and legal-basis tokens, adapter registry, scoped requests, event publication | `services/exchange`, `services/identity-consent`, `adapters/simulated-offices/` |
+| M4 Verifiable Documents and Trust | Templates, Ed25519 signing, QR codes, verification, revocation, key rotation | `services/document-trust`, `apps/verifier-web` |
+| M5 Appointments, Queues and Payments | Slots, queues, fee schedules, payment, settlement, refunds | `services/appointments-payments` |
+| M6 Audit and Analytics | Hash-chained audit, access history, disputes, bottleneck reports | `services/audit-analytics` |
 
-  **Workflow, not paperwork**         Administrative procedures are
-                                      modelled as trackable workflows,
-                                      including parallel checks,
-                                      deadlines and escalation.
+Supporting components include the API gateway, notifications, reference adapter, object storage, event broker, identity provider, payment gateway, SMS gateway, and signing key vault.
 
-  **Verifiable by default**           Issued documents carry a digital
-                                      signature and QR-based verification
-                                      route.
+## Reference journeys
 
-  **Accountability built in**         Accesses and decisions are recorded
-                                      so citizens and authorized auditors
-                                      can inspect activity.
+| Journey | Participating offices | Principal interaction |
+|---|---|---|
+| Birth certificate | Hospital, civil registry | Hospital record creates a civil-registry draft; consent fetches and prefills verified birth data |
+| Business registration | Commerce registry, tax office, social-insurance system, council | Payment precedes parallel compliance checks and bundle issuance |
+| Land-title transfer | Land registry, notary, relevant authority | Title, representation, and legal checks are coordinated through the workflow |
 
-  **Inclusive access**                Citizen journeys are designed for
-                                      mobile devices, low bandwidth and
-                                      assisted service counters.
-  -----------------------------------------------------------------------
+## System architecture
 
-## 🔄 How PaperTrail works
+```mermaid
+flowchart LR
+    CIT["Citizen<br/>Web / Mobile"]
+    OFF["Office staff<br/>Console"]
+    VER["Public verifier<br/>Web / API"]
 
-The following illustrates the intended journey. Exact steps depend on
-the service being requested.
+    GW["API Gateway<br/>TLS, routing, rate limits"]
+    ID["Identity and Consent"]
 
-``` mermaid
-flowchart TD
-    A["👤 Citizen selects a service"] --> B["📝 Completes one application"]
-    B --> C["🔐 Reviews and grants consent"]
-    C --> D["⚙️ Workflow instance is created"]
-    D --> E["🏢 Relevant offices receive tasks"]
-    E --> F["🔄 Authorized data is exchanged"]
-    F --> G["✅ Offices review and approve"]
-    G --> H["✍️ Issuing office signs the document"]
-    H --> I["📲 Document appears in citizen wallet"]
-    I --> J["🔎 Third party verifies using QR or reference"]
-```
-
-1.  **Start an application** --- The citizen chooses a service and sees
-    its requirements, fees and expected duration.
-2.  **Review information and consent** --- Available information can be
-    requested from its owning office. The citizen reviews each requested
-    data exchange and grants or refuses consent.
-3.  **Coordinate offices** --- PaperTrail creates a workflow and assigns
-    tasks to the responsible office roles. Independent checks can run in
-    parallel.
-4.  **Track progress** --- The citizen sees the application timeline,
-    responsible office and status changes. Officers work from an office
-    task inbox.
-5.  **Issue a trusted document** --- Once approved, the issuing office
-    generates and digitally signs the document.
-6.  **Verify independently** --- A verifier scans the QR code or enters
-    a reference to check authenticity and revocation status without
-    needing a PaperTrail account.
-
-## 🧩 Platform modules
-
-PaperTrail is organized around six modules defined in its Software
-Requirements Specification (SRS).
-
-```{=html}
-<details open>
-```
-```{=html}
-<summary>
-```
-`<strong>`{=html}M1 · Citizen Portal and Document
-Wallet`</strong>`{=html}
-```{=html}
-</summary>
-```
-The citizen's entry point for service discovery, applications and
-verified documents.
-
--   Search and browse services by life event.
--   Complete applications, upload supporting files and save drafts.
--   Track each application through a status timeline.
--   Receive status notifications.
--   Keep issued documents in a personal wallet and share them through
-    controlled links, QR codes or PDFs.
--   Support assisted-counter applications for citizens who need help.
-
-```{=html}
-</details>
-```
-```{=html}
-<details>
-```
-```{=html}
-<summary>
-```
-`<strong>`{=html}M2 · Workflow Engine`</strong>`{=html}
-```{=html}
-</summary>
-```
-Turns administrative procedures into configurable, executable workflows.
-
--   Model tasks, decisions, parallel branches, joins and automatic
-    steps.
--   Assign work to office roles and manage task queues.
--   Enforce service-level deadlines, warnings and escalation.
--   Support approve, reject and request-information decisions.
--   Record workflow and task state changes.
-
-```{=html}
-</details>
-```
-```{=html}
-<details>
-```
-```{=html}
-<summary>
-```
-`<strong>`{=html}M3 · Consent and Inter-Office Data
-Exchange`</strong>`{=html}
-```{=html}
-</summary>
-```
-The controlled exchange layer between participating offices.
-
--   Register office adapters and their available data capabilities.
--   Validate consent or legal-basis authorization before a request.
--   Route data requests through defined interfaces.
--   Publish events when relevant records or application states change.
--   Keep each office's master records under that office's control.
-
-```{=html}
-</details>
-```
-```{=html}
-<details>
-```
-```{=html}
-<summary>
-```
-`<strong>`{=html}M4 · Verifiable Documents and Trust`</strong>`{=html}
-```{=html}
-</summary>
-```
-Makes issued documents independently checkable.
-
--   Generate documents from office-approved templates.
--   Sign documents using the issuing office's Ed25519 key.
--   Attach a unique identifier, content hash, issuer and issue date.
--   Generate QR codes and provide a public verification page/API.
--   Support revocation while retaining the document's verification
-    history.
-
-```{=html}
-</details>
-```
-```{=html}
-<details>
-```
-```{=html}
-<summary>
-```
-`<strong>`{=html}M5 · Appointments, Queues and
-Payments`</strong>`{=html}
-```{=html}
-</summary>
-```
-Coordinates the physical visits and fees that a service genuinely
-requires.
-
--   Offer appointments when a service requires physical presence.
--   Manage office queues and waiting status.
--   Collect one payment for an application.
--   Split settlement between participating offices according to the
-    applicable fee schedule.
--   Support payment status and refund rules.
-
-```{=html}
-</details>
-```
-```{=html}
-<details>
-```
-```{=html}
-<summary>
-```
-`<strong>`{=html}M6 · Audit and Analytics`</strong>`{=html}
-```{=html}
-</summary>
-```
-Provides accountability and visibility into service performance.
-
--   Maintain an append-only, tamper-evident audit trail.
--   Let citizens see who accessed their data.
--   Let authorized auditors review activity and check audit integrity.
--   Report workflow durations, overdue tasks and process bottlenecks.
--   Provide operational visibility into service and adapter health.
-
-```{=html}
-</details>
-```
-## 🏛️ Reference services
-
-The initial prototype is organized around three administrative journeys:
-
-  -----------------------------------------------------------------------
-  Service                             Example participating institutions
-  ----------------------------------- -----------------------------------
-  **Birth certificate**               Hospital, civil registry
-
-  **Business registration**           Commerce registry, tax office,
-                                      social insurance, council
-
-  **Land title transfer**             Land registry, notary and other
-                                      relevant authorities
-  -----------------------------------------------------------------------
-
-The prototype also includes simulated-office adapters as a planned
-demonstration approach---for example, a hospital, civil registry,
-commerce registry, tax office, land registry, notary and council. Each
-simulated office is intended to keep its own database, allowing the
-federated workflow to be demonstrated without requiring immediate
-integration with production government systems.
-
-## 🏗️ Architecture
-
-PaperTrail follows a **federated, modular and event-driven
-architecture**.
-
-The platform coordinates services, permissions, workflows and trust. It
-does not become the master database for every participating institution.
-Office adapters expose approved capabilities through documented
-contracts, while an office console provides a route for offices that do
-not yet have a digital system.
-
-``` mermaid
-flowchart TB
-    subgraph Clients["USER-FACING APPLICATIONS"]
-      CIT["Citizen web app"]
-      OFF["Office console"]
-      VER["Public verification portal"]
-      MOB["Future mobile app"]
+    subgraph CORE["PaperTrail platform"]
+        direction TB
+        CP["M1 Citizen Portal"]
+        WF["M2 Workflow Engine"]
+        EX["M3 Consent and Exchange"]
+        DT["M4 Document and Trust"]
+        AQ["M5 Appointments and Payments"]
+        AA["M6 Audit and Analytics"]
+        NS["Notification Service"]
     end
 
-    GW["API Gateway"]
+    BROKER[("RabbitMQ / AMQP<br/>Durable events")]
+    MINIO[("S3-compatible object<br/>storage")]
+    VAULT[("Signing key vault<br/>HSM boundary")]
 
-    subgraph Platform["PAPERTRAIL PLATFORM SERVICES"]
-      ID["Identity & Consent"]
-      WF["Workflow Engine"]
-      EX["Inter-Office Exchange"]
-      DOC["Document & Signing"]
-      PAY["Appointments & Payments"]
-      AUD["Audit & Analytics"]
-      NOT["Notifications"]
-      MQ[("Event Broker")]
+    subgraph OFFICES["Federated office systems"]
+        HOSP["Hospital"]
+        CIVIL["Civil Registry"]
+        COMMERCE["Commerce Registry"]
+        TAX["Tax Office"]
+        LAND["Land Registry"]
+        NOTARY["Notary"]
+        COUNCIL["Council"]
     end
-
-    subgraph Offices["FEDERATED OFFICE SYSTEMS"]
-      H["Hospital"]
-      CR["Civil Registry"]
-      TR["Tax / Commerce Registry"]
-      LR["Land Registry"]
-      NT["Notary / Council"]
-    end
-
-    EXT["External providers<br/>Identity · SMS · Payments · Key Vault"]
-    STORE[("Service databases<br/>and object storage")]
 
     CIT --> GW
     OFF --> GW
     VER --> GW
-    MOB -. future .-> GW
     GW --> ID
+    GW --> CP
     GW --> WF
     GW --> EX
-    GW --> DOC
-    GW --> PAY
-    GW --> AUD
-    ID <--> MQ
-    WF <--> MQ
-    EX <--> MQ
-    DOC <--> MQ
-    PAY <--> MQ
-    AUD <--> MQ
-    NOT <--> MQ
-    EX <-->|Authorized requests / events| H
-    EX <-->|Authorized requests / events| CR
-    EX <-->|Authorized requests / events| TR
-    EX <-->|Authorized requests / events| LR
-    EX <-->|Authorized requests / events| NT
-    Platform --> STORE
-    ID <--> EXT
-    DOC <--> EXT
-    PAY <--> EXT
-    NOT <--> EXT
+    GW --> DT
+    GW --> AQ
+    GW --> AA
+
+    CP --> BROKER
+    WF --> BROKER
+    EX --> BROKER
+    DT --> BROKER
+    AQ --> BROKER
+    AA --> BROKER
+    BROKER --> NS
+
+    EX -->|"Validated consent or legal basis"| HOSP
+    EX -->|"Validated consent or legal basis"| CIVIL
+    EX -->|"Validated consent or legal basis"| COMMERCE
+    EX -->|"Validated consent or legal basis"| TAX
+    EX -->|"Validated consent or legal basis"| LAND
+    EX -->|"Validated consent or legal basis"| NOTARY
+    EX -->|"Validated consent or legal basis"| COUNCIL
+
+    DT --> VAULT
+    CP --> MINIO
+    DT --> MINIO
 ```
 
-### Architectural boundaries
+### Core design rules
 
--   **One database per service** --- Services own their operational data
-    and communicate through APIs and events rather than sharing database
-    tables.
--   **One database per simulated office** --- The prototype demonstrates
-    that institutional records remain decentralized.
--   **Gateway-mediated access** --- User-facing clients reach platform
-    services through the API gateway.
--   **Event-driven coordination** --- The broker supports asynchronous
-    communication between services.
--   **Office integration boundary** --- The exchange service
-    communicates with office adapters through documented interfaces.
--   **External trust and delivery providers** --- Identity, payment, SMS
-    and key-management capabilities are integrated through explicit
-    interfaces.
+- Clients reach services only through the API gateway.
+- Each platform service and simulated office has an independent database.
+- REST contracts handle synchronous requests; events handle asynchronous coordination.
+- The exchange service validates every data request and never becomes the master owner of office records.
+- Workflow state is separate from audit history and document metadata.
+- Verification can rely on a document signature, issuer public key, and revocation status.
+- Audit is append-only and hash-chained.
 
-### Technology stack
+## Consent and exchange design
 
-The following is the repository's chosen implementation direction. Some
-integrations and infrastructure are planned foundations, not claims that
-every capability is already implemented.
+```mermaid
+sequenceDiagram
+    actor Citizen
+    participant Portal as Citizen Portal
+    participant Exchange as Exchange Service
+    participant Identity as Identity and Consent
+    participant Adapter as Office Adapter
+    participant Office as Source Office
+    participant Audit as Audit Service
 
-  -------------------------------------------------------------------------
-  Layer                   Technology                Intended role
-  ----------------------- ------------------------- -----------------------
-  Citizen and office      **React + Vite**          Component-based web
-  interfaces                                        applications
+    Citizen->>Portal: Request a service
+    Portal->>Identity: Request consent for specific fields
+    Identity-->>Citizen: Purpose, source, fields, expiry
+    Citizen->>Identity: Approve or refuse
+    Identity-->>Exchange: Signed scoped consent or revocation
+    Portal->>Exchange: Data request
+    Exchange->>Exchange: Validate requester, audience, scope, purpose, expiry
+    alt Valid consent or legal basis
+        Exchange->>Adapter: Forward minimised request
+        Adapter->>Office: Read requested fields
+        Office-->>Adapter: Field values and source metadata
+        Adapter-->>Exchange: Minimal response
+        Exchange-->>Portal: Values, source office, timestamp
+        Exchange->>Audit: Log read and authorization
+    else Invalid, expired, or revoked
+        Exchange-->>Portal: Reject request
+        Exchange->>Audit: Log rejection
+    end
+```
 
-  Backend services        **Node.js + Fastify**     Lightweight service
-                                                    APIs and OpenAPI
-                                                    contracts
+A consent token contains at least `citizen_id`, `requesting_office`, `source_office`, `data_items`, `purpose`, `issued_at`, `expires_at`, `revoked_at`, and its signature.
 
-  Service data            **PostgreSQL**            Isolated database per
-                                                    service and simulated
-                                                    office
+Revocation blocks new requests within 60 seconds. Refused consent may fall back to a supporting upload for officer review. Legal-basis requests require a legal reference and case number and remain visible in the citizen access log.
 
-  Event messaging         **RabbitMQ**              Durable asynchronous
-                                                    workflows and event
-                                                    delivery
+## Birth certificate sequence
 
-  Local object storage    **MinIO**                 S3-compatible storage
-                                                    for attachments and
-                                                    generated documents
+```mermaid
+sequenceDiagram
+    actor Parent
+    participant Portal as Citizen Portal
+    participant Workflow as Workflow Engine
+    participant Consent as Consent Service
+    participant Exchange as Exchange Service
+    participant Civil as Civil Registry
+    participant Hospital as Hospital System
+    participant Document as Document and Trust
+    participant Audit as Audit Service
 
-  Local orchestration     **Docker Compose**        Run the development
-                                                    environment
+    Parent->>Portal: Submit birth-certificate application
+    Portal->>Consent: Request birth-record consent
+    Parent->>Consent: Approve scoped consent
+    Consent-->>Exchange: Signed consent token
+    Portal->>Workflow: Create application and workflow
+    Workflow->>Exchange: Fetch authorised birth fields
+    Exchange->>Civil: Request registered birth record
+    Civil->>Hospital: Validate linked birth notification
+    Hospital-->>Civil: Verified birth record
+    Civil-->>Exchange: Requested fields and source
+    Exchange-->>Workflow: Prefilled fields
+    Workflow->>Workflow: Assign civil-registry validation task
+    Workflow->>Parent: Show status and timeline
+    Workflow->>Document: Issue approved certificate
+    Document->>Document: Sign with Ed25519 key
+    Document-->>Parent: QR certificate in wallet
+    Workflow->>Audit: Record workflow decisions
+    Exchange->>Audit: Record source-office access
+```
 
-  Deployment              **Kubernetes**            Portable deployment,
-  orchestration                                     scaling, probes and
-                                                    configuration
+The workflow is created after submission. A fetched birth record is prefilled data, not an officer-approved decision.
 
-  API contracts           **REST + JSON / OpenAPI** Documented service and
-                                                    adapter interfaces
+## Business registration workflow
 
-  Observability direction **OpenTelemetry-ready**   Consistent health,
-                                                    logs, metrics and
-                                                    distributed tracing
-  -------------------------------------------------------------------------
+```mermaid
+flowchart TD
+    START["Application received"] --> PAY["Payment confirmed"]
+    PAY --> FORK{"Start parallel checks"}
+    FORK --> COMMERCE["Commerce Registry"]
+    FORK --> TAX["Tax Office"]
+    FORK --> SOCIAL["Social Insurance"]
+    FORK --> COUNCIL["Council"]
+    COMMERCE --> JOIN{"All checks complete"}
+    TAX --> JOIN
+    SOCIAL --> JOIN
+    COUNCIL --> JOIN
+    JOIN -->|Approved| BUNDLE["Issue signed document bundle"]
+    JOIN -->|One rejection| REJECT["Reject or request information"]
+    JOIN -->|Outside deadline| ESCALATE["Escalate overdue task"]
+    BUNDLE --> WALLET["Store in citizen wallet"]
+    REJECT --> NOTIFY["Notify citizen"]
+    ESCALATE --> JOIN
+```
 
-> **Architecture note:** The SRS specifies an event broker using AMQP or
-> Redis Streams. This repository selects RabbitMQ as its implementation
-> choice. The SRS also specifies S3-compatible object storage and a key
-> vault/HSM boundary for signing keys.
+Payment covers all application fees once. M5 calculates the fee schedule in force at submission and splits settlement lines across participating offices. The workflow cannot pass its payment step until the gateway confirms payment.
 
-## 🗂️ Repository structure
+## Document trust design
 
-``` text
-papertrail/
+```mermaid
+sequenceDiagram
+    actor Verifier
+    participant Portal as Verification Portal
+    participant Trust as Document and Trust
+    participant Key as Published Issuer Keys
+    participant Revocation as Revocation Status
+    participant Audit as Audit Service
+
+    Verifier->>Portal: Scan QR, enter ID, or upload file
+    Portal->>Trust: Resolve document ID
+    Trust->>Key: Fetch issuer public key
+    Trust->>Revocation: Check document status
+    Trust->>Trust: Verify signature and content hash
+    Trust-->>Portal: Valid, revoked, superseded, or invalid
+    Portal-->>Verifier: Type, issuer, issue date, and status
+    Portal->>Audit: Log verification event without document content
+```
+
+Every document includes a UUID, document type, issuer, UTC issue date, content hash, Ed25519 signature, QR verification address, and revocation or supersession status. Public verification reveals only the minimum status information unless the holder shares a full-view link.
+
+## Deployment architecture
+
+```mermaid
+flowchart TB
+    INTERNET["Citizens, officers, verifiers"]
+    INGRESS["DNS / ingress / reverse proxy"]
+
+    subgraph CLUSTER["Docker or Kubernetes platform cluster"]
+        GW2["API gateway replicas"]
+        APPS["Web applications"]
+        SERVICES["Platform service deployments"]
+        WORKERS["Event consumers and timers"]
+        DB[("PostgreSQL databases")]
+        BROKER2[("RabbitMQ")]
+        OBJECT[("S3-compatible storage")]
+        VAULT2["Key vault / HSM"]
+        OBS["Logs, metrics, tracing"]
+    end
+
+    subgraph HOSTED["Hosted office site"]
+        ADAPTERH["Office adapter"]
+        OFFICEH[("Office database")]
+    end
+
+    subgraph ONPREM["Office on-premises site"]
+        ADAPTERO["Office adapter"]
+        OFFICEO[("Office database")]
+        CONSOLE["Office console"]
+    end
+
+    INTERNET --> INGRESS
+    INGRESS --> APPS
+    INGRESS --> GW2
+    GW2 --> SERVICES
+    SERVICES --> DB
+    SERVICES --> BROKER2
+    SERVICES --> OBJECT
+    WORKERS --> BROKER2
+    SERVICES --> VAULT2
+    SERVICES --> OBS
+    SERVICES -->|"mTLS"| ADAPTERH
+    SERVICES -->|"mTLS"| ADAPTERO
+    ADAPTERH --> OFFICEH
+    ADAPTERO --> OFFICEO
+    CONSOLE --> ADAPTERO
+```
+
+The repository includes Dockerfiles, Docker Compose dependencies, Kubernetes namespace/deployment/ingress/secret/HPA templates, and health/liveness/readiness patterns. Production deployments must replace placeholder secrets and images and provision persistent databases and storage.
+
+## Repository structure
+
+```text
+PaperTrail/
 ├── apps/
-│   ├── citizen-web/          # Citizen portal and document wallet
-│   ├── office-console/       # Office staff and administrator workspace
-│   ├── verifier-web/         # Public document verification
-│   └── mobile/               # Future React Native application
-│
+│   ├── citizen-web/
+│   ├── office-console/
+│   ├── verifier-web/
+│   └── mobile/
 ├── services/
 │   ├── api-gateway/
 │   ├── identity-consent/
+│   ├── citizen-portal/
 │   ├── workflow/
 │   ├── exchange/
-│   ├── documents/
+│   ├── document-trust/
 │   ├── appointments-payments/
-│   ├── audit-analytics/
-│   └── notifications/
-│
+│   ├── notification/
+│   └── audit-analytics/
 ├── adapters/
-│   └── simulated-offices/   # Independent demo office systems
-│
-├── packages/                 # Shared contracts and utilities
+│   ├── reference-adapter/
+│   └── simulated-offices/
+├── packages/
+│   ├── shared/
+│   ├── openapi/
+│   └── database-migrations/
 ├── infra/
-│   ├── docker/               # Dockerfiles and Compose
-│   └── kubernetes/           # Kubernetes manifests
-├── docs/                     # Architecture, API, ADRs and runbooks
-└── tests/                    # Integration, end-to-end, load and security tests
+│   ├── docker/
+│   └── kubernetes/
+├── docs/
+│   ├── architecture/
+│   ├── api/
+│   ├── decisions/
+│   ├── setup/
+│   ├── runbooks/
+│   └── requirements/
+└── tests/
+    ├── e2e/
+    ├── load/
+    └── security/
 ```
 
-*The tree describes the intended repository organization. Directories
-and services may be introduced incrementally as implementation
-progresses.*
+## Technology decisions
 
-## 🚀 Getting started
+| Concern | Selected technology | Reason |
+|---|---|---|
+| Web frontend | React with Vite | Reusable components, strong ecosystem, mature browser tooling |
+| Backend | Node.js with Fastify | Lightweight containers, JSON Schema/OpenAPI support, low startup overhead |
+| Database | PostgreSQL 16+ | Transactions, constraints, mature backup and replication tooling |
+| Event broker | RabbitMQ | Durable queues, acknowledgements, retry and dead-letter support |
+| Object storage | MinIO locally | S3-compatible API for portable local development |
+| Containers | Docker | Repeatable builds and isolated dependencies |
+| Orchestration | Kubernetes | Replicas, probes, ingress, configuration, storage, and autoscaling |
+| Identity | OIDC plus OTP | Standard external identity integration and SMS-capable access |
+| Documents | Ed25519 in vault/HSM | Officers never handle private keys; verification is public |
+
+Full rationale: [ADR-001: Technology Stack](docs/decisions/adr-001-technology-stack.md).
+
+## Getting started
 
 ### Prerequisites
 
--   Node.js 20 or later
--   npm
--   Docker Desktop or Docker Engine with Docker Compose
--   Git
--   `kubectl` (optional; for Kubernetes work)
+- Node.js 20 or later
+- npm
+- Docker Engine or Docker Desktop
+- Docker Compose
+- Optional: kubectl
 
-### 1. Clone the repository
-
-``` bash
-git clone <YOUR_REPOSITORY_URL>
-cd papertrail
-```
-
-### 2. Configure environment variables
-
-``` bash
-cp .env.example .env
-```
-
-Review `.env` and provide local development values where required. Do
-not commit real credentials, private keys, tokens or production secrets.
-
-### 3. Install dependencies
-
-``` bash
+```powershell
+Copy-Item .env.example .env
 npm install
-```
-
-### 4. Start the local environment
-
-``` bash
 docker compose -f infra/docker/compose.yaml up --build
 ```
 
-To run services in the background:
+### Local endpoints
 
-``` bash
-docker compose -f infra/docker/compose.yaml up --build -d
-```
+| Component | Address |
+|---|---|
+| Citizen web app | `http://localhost:3000` |
+| API gateway | `http://localhost:8080` |
+| RabbitMQ management | `http://localhost:15672` |
+| MinIO console | `http://localhost:9001` |
+| PostgreSQL | `localhost:5432` |
 
-### 5. Check the services
+Stop the stack:
 
-  Component            Local address
-  -------------------- --------------------------------
-  API gateway health   `http://localhost:8080/health`
-  Citizen web app      `http://localhost:3000`
-
-The endpoints above reflect the current project setup described by the
-repository. Other interfaces and services should be considered available
-only when their implementations are present and running.
-
-### Stop the environment
-
-``` bash
+```powershell
 docker compose -f infra/docker/compose.yaml down
 ```
 
-To remove local Compose volumes as well (this deletes persisted
-development data):
+Preview Kubernetes manifests:
 
-``` bash
-docker compose -f infra/docker/compose.yaml down -v
+```powershell
+kubectl kustomize infra/kubernetes/overlays/dev
 ```
 
-## 🔐 Security, privacy and trust
+## Security and privacy
 
-PaperTrail handles identity information, administrative evidence and
-official documents. Security is therefore a core architectural
-requirement, not an optional enhancement.
+- TLS 1.2 or later for all traffic.
+- Mutual TLS for office-to-office and sensitive adapter connections.
+- AES-256 encryption at rest.
+- OIDC login and MFA for officers, auditors, and administrators.
+- Least-privilege, office-scoped roles.
+- Consent or legal-basis authorization before cross-office reads.
+- Revocation enforcement for consent within 60 seconds.
+- Signing keys held outside application services in a vault/HSM.
+- Account lockout after five failed OTP attempts for 15 minutes.
+- Request IDs, correlation IDs, audit metadata, and webhook idempotency.
+- Malware scanning for uploaded PDF/JPG/PNG files.
+- No real citizen data or legally relied-upon signatures in this template.
 
-The design calls for:
+## Implementation status
 
--   **Explicit authorization:** inter-office requests carry a valid,
-    scoped consent token or applicable legal-basis token.
--   **Transport security:** HTTPS with TLS 1.2 or later; mutual TLS for
-    office-to-office connections.
--   **Signed documents:** Ed25519 signatures, with signing keys held in
-    a key vault or HSM boundary.
--   **Role-based access:** access is restricted according to user roles
-    and responsibilities.
--   **Auditable actions:** access and decisions are recorded in an
-    append-only audit trail.
--   **Safe integrations:** signed webhooks, idempotency keys and
-    documented API contracts.
--   **Data minimization:** offices remain the authoritative owners of
-    their records; verification checks should not require storing
-    submitted document content.
+| Area | Status |
+|---|---|
+| React citizen portal foundation | Implemented template |
+| API gateway health and catalog | Implemented placeholder |
+| Six module service boundaries | Documented |
+| Simulated office boundaries | Documented |
+| Docker Compose | Configured |
+| Kubernetes base manifests | Configured |
+| PostgreSQL schemas and migrations | Not implemented |
+| Authentication and authorization | Not implemented |
+| Consent enforcement | Not implemented |
+| Workflow state machine | Not implemented |
+| Document signing | Not implemented |
+| Payments and appointments | Not implemented |
+| Audit hash chain | Not implemented |
+| Office adapters | Not implemented |
 
-**Important:** This repository is a development template/prototype
-foundation. Do not use it to process real citizens' personal data or
-issue legally relied-upon documents until security controls, legal
-requirements, key management, operational procedures and integrations
-have been independently reviewed and hardened.
+See [requirements traceability](docs/requirements/traceability.md).
 
-## 🧪 Development priorities
+## Documentation
 
-The initial implementation roadmap is:
-
-1.  Define domain models and OpenAPI contracts for each module.
-2.  Add database migrations and persistence boundaries for every
-    service.
-3.  Implement authentication, role-based authorization and signed
-    internal-service credentials.
-4.  Connect RabbitMQ publishers, consumers, retries and failure
-    handling.
-5.  Enforce consent/legal-basis validation before every cross-office
-    data exchange.
-6.  Emit audit events for access, consent, workflow decisions and
-    document lifecycle actions.
-7.  Implement document generation, Ed25519 signing, QR verification and
-    revocation.
-8.  Integrate simulated offices and demonstrate the three reference
-    services end to end.
-9.  Add automated integration, end-to-end, load and security tests.
-10. Prepare deployment, observability, key rotation and operational
-    runbooks.
-
-## 🧭 Project scope and boundaries
-
-### Included in the prototype direction
-
--   Six platform modules.
--   Citizen portal, office console and public verification interface.
--   Birth certificate, business registration and land title transfer
-    reference workflows.
--   Simulated participating offices with independent databases.
--   Office adapter approach for future institutional integrations.
-
-### Explicitly outside the platform's role
-
--   Replacing the legal authority or internal systems of public offices.
--   Changing the laws governing administrative services.
--   Operating a national identity system.
--   Becoming the central master repository for institutional records.
-
-Real-world deployment depends on participating institutions, applicable
-data-protection law, legal recognition of digital signatures, identity
-services and payment/SMS provider availability.
-
-## 🤝 Contributing
-
-Contributions, architectural discussions and constructive feedback are
-welcome.
-
-1.  Open an issue describing the problem or proposed improvement.
-2.  For significant architectural changes, document the decision and
-    trade-offs.
-3.  Keep service boundaries and API contracts explicit.
-4.  Add or update tests when behavior changes.
-5.  Never commit secrets, real citizen records or private signing keys.
-
-A contribution guide and issue templates can be added as the project
-matures.
-
-## 📚 Documentation
-
--   **Software Requirements Specification:** the source of the
-    platform's functional, non-functional, interface and data
-    requirements.
--   `docs/architecture/` --- system architecture and design decisions.
--   `docs/api/` --- API contracts and integration references.
--   `docs/runbooks/` --- local development and operational procedures.
--   `docs/adr/` --- Architecture Decision Records.
-
-Documentation paths are intended locations and may be populated as the
-corresponding material is added.
-
-## 📌 Project status
-
-PaperTrail is being developed incrementally from its SRS and the initial
-repository foundation. The architecture and technology direction are
-defined, but the presence of a folder, planned module or documented
-capability does not mean that feature is production-ready or fully
-implemented.
-
-Track implementation progress through the repository's issues and
-project board.
-
-------------------------------------------------------------------------
-
-::: {align="center"}
-### Less paperwork between people and the services they need.
-
-**PaperTrail --- Apply once. Stay informed. Verify with confidence.**
-
-`<sub>`{=html}Built as a modular foundation for connected, accountable
-public services.`</sub>`{=html}
-:::
+- [Architecture overview](docs/architecture/overview.md)
+- [Technology ADR](docs/decisions/adr-001-technology-stack.md)
+- [Development setup](docs/setup/development.md)
+- [Requirements traceability](docs/requirements/traceability.md)
+- [Local deployment runbook](docs/runbooks/local-deployment.md)
+- [SRS PDF](docs/PaperTrail%20%E2%80%94%20Software%20Requirements%20Specification.pdf)
