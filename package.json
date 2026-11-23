@@ -1,0 +1,21 @@
+{
+  "name": "papertrail",
+  "private": true,
+  "version": "0.1.0",
+  "workspaces": [
+    "apps/*",
+    "services/*",
+    "adapters/reference-adapter",
+    "adapters/simulated-offices/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "npm run dev --workspace @papertrail/citizen-web",
+    "build": "npm run build --workspaces --if-present",
+    "test": "npm run test --workspaces --if-present",
+    "lint": "npm run lint --workspaces --if-present"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
