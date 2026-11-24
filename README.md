@@ -84,6 +84,8 @@ Supporting components include the API gateway, notifications, reference adapter,
 
 ## System architecture
 
+For the full component, state, sequence, persistence, event, security, and deployment design, see [detailed architecture and design](docs/architecture/sug_designe.md).
+
 ```mermaid
 flowchart LR
     CIT["Citizen<br/>Web / Mobile"]
